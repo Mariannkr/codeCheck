@@ -119,6 +119,23 @@
           <input id="input-code" type="text" inputmode="text" placeholder="Ej: 031-AIW-615 o AIWA" autocapitalize="characters" spellcheck="false" />
         </div>
         <ul id="suggestions" class="suggestions"></ul>
+        <div class="manual-qty-card">
+          <label for="input-manual-qty" class="field-label">Cantidad / Stock a sumar</label>
+          <div class="manual-qty-row">
+            <div class="qty-input-wrap">
+              <button type="button" class="btn-step" id="btn-manual-dec" title="Restar 1">-</button>
+              <input id="input-manual-qty" type="number" min="1" value="1" step="1" class="qty-num-input" />
+              <button type="button" class="btn-step" id="btn-manual-inc" title="Sumar 1">+</button>
+            </div>
+            <div class="qty-quick-buttons">
+              <button type="button" class="btn-preset" data-manual-qty="1">×1</button>
+              <button type="button" class="btn-preset" data-manual-qty="10">×10</button>
+              <button type="button" class="btn-preset" data-manual-qty="100">×100</button>
+              <button type="button" class="btn-preset hero" data-manual-qty="1000">×1000</button>
+            </div>
+          </div>
+        </div>
+
         <button id="btn-manual-add" class="btn btn-primary block" type="submit">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Agregar a la lista</span>
         </button>
@@ -201,6 +218,38 @@
       </div>
 
       <button class="btn btn-ghost block" value="close">Cerrar</button>
+    </form>
+  </dialog>
+
+  <!-- Diálogo para editar/sumar stock -->
+  <dialog id="dlg-qty" class="sheet">
+    <form id="form-dlg-qty" method="dialog" class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <h3 id="dlg-qty-title">Ajustar Stock Físico</h3>
+      <p id="dlg-qty-sub" class="muted">Ingresá la cantidad para este artículo.</p>
+      
+      <div class="qty-dlg-content">
+        <div class="qty-mode-toggle">
+          <button type="button" id="btn-mode-add" class="mode-tab active">Sumar al Stock (+)</button>
+          <button type="button" id="btn-mode-set" class="mode-tab">Cantidad Exacta (=)</button>
+        </div>
+
+        <div class="input-wrap qty-dlg-input-wrap">
+          <input id="input-qty-val" type="number" min="1" step="1" value="1" />
+        </div>
+
+        <div class="qty-quick-buttons dlg-presets" style="margin-top: 10px;">
+          <button type="button" class="btn-preset" data-dlg-qty="1">+1</button>
+          <button type="button" class="btn-preset" data-dlg-qty="10">+10</button>
+          <button type="button" class="btn-preset" data-dlg-qty="100">+100</button>
+          <button type="button" class="btn-preset hero" data-dlg-qty="1000">+1000</button>
+        </div>
+      </div>
+
+      <div class="sheet-actions" style="margin-top:14px;">
+        <button id="btn-qty-confirm" class="btn btn-primary block" type="submit">Aplicar cambio de stock</button>
+        <button class="btn btn-ghost block" type="button" id="btn-qty-cancel" value="close">Cancelar</button>
+      </div>
     </form>
   </dialog>
 

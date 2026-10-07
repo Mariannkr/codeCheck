@@ -155,7 +155,8 @@ function calculateItemStats(code, row, scanEntry = null) {
 /* =========================================================
    Registro de Lectura
    ========================================================= */
-function registerCode(rawCode, source) {
+function registerCode(rawCode, source, qty = 1) {
+  const amount = Math.max(1, parseInt(qty, 10) || 1);
   const code = String(rawCode || '').trim();
   if (!code) return null;
 
@@ -165,7 +166,7 @@ function registerCode(rawCode, source) {
 
   let result;
   if (existing) {
-    existing.count = (existing.count || 1) + 1;
+    existing.count = (existing.count || 1) + amount;
     existing.time = Date.now();
     // Mover a la cima de la lista
     state.scans = [existing, ...state.scans.filter((s) => s !== existing)];
@@ -173,9 +174,9 @@ function registerCode(rawCode, source) {
     feedback('dup');
 
     const stats = calculateItemStats(code, row, existing);
-    toast(`${row ? row.CODIGO : code} → FISICO: ${stats.fisico} (DIFEREN: ${stats.diferenFmt})`, 'warn');
+    toast(`${row ? row.CODIGO : code} → FISICO: ${stats.fisico} (+${amount}) (DIFEREN: ${stats.diferenFmt})`, 'warn');
   } else {
-    const entry = { code: row ? row.CODIGO : code, row, found: !!row, time: Date.now(), count: 1, source };
+    const entry = { code: row ? row.CODIGO : code, row, found: !!row, time: Date.now(), count: amount, source };
     state.scans.unshift(entry);
     result = entry;
     feedback(row ? 'ok' : 'miss');
@@ -183,13 +184,76 @@ function registerCode(rawCode, source) {
     const stats = calculateItemStats(code, row, entry);
     toast(row
       ? `Leído: ${row.CODIGO} (FISICO: ${stats.fisico} / DIFEREN: ${stats.diferenFmt})`
-      : `Código ${code} no estaba en base (FISICO: 1 / DIFEREN: +1)`, row ? 'ok' : 'warn');
+      : `Código ${code} no estaba en base (FISICO: ${amount} / DIFEREN: +${amount})`, row ? 'ok' : 'warn');
   }
 
   saveScans();
   renderList();
   bumpBadge();
   return result;
+}
+
+function addStock(rawCode, delta) {
+  const code = String(rawCode || '').trim();
+  if (!code) return;
+  const d = parseInt(delta, 10) || 0;
+  if (!d) return;
+
+  const row = lookup(code);
+  const key = row ? norm(row.CODIGO) : norm(code);
+  const existing = state.scans.find((s) => norm(s.row?.CODIGO ?? s.code) === key);
+
+  if (existing) {
+    const newCount = (existing.count || 1) + d;
+    if (newCount <= 0) {
+      state.scans = state.scans.filter((s) => s !== existing);
+      toast(`Se quitó ${row ? row.CODIGO : code} de la lista`, 'warn');
+    } else {
+      existing.count = newCount;
+      existing.time = Date.now();
+      const stats = calculateItemStats(code, row, existing);
+      toast(`${row ? row.CODIGO : code} → FISICO: ${stats.fisico} (${d > 0 ? '+' + d : d})`, 'ok');
+    }
+  } else if (d > 0) {
+    const entry = { code: row ? row.CODIGO : code, row, found: !!row, time: Date.now(), count: d, source: 'manual' };
+    state.scans.unshift(entry);
+    const stats = calculateItemStats(code, row, entry);
+    toast(`Agregado: ${row ? row.CODIGO : code} (FISICO: ${stats.fisico})`, 'ok');
+  }
+
+  saveScans();
+  renderList();
+  bumpBadge();
+}
+
+function setStock(rawCode, exactValue) {
+  const code = String(rawCode || '').trim();
+  if (!code) return;
+  const val = Math.max(0, parseInt(exactValue, 10) || 0);
+
+  const row = lookup(code);
+  const key = row ? norm(row.CODIGO) : norm(code);
+  const existing = state.scans.find((s) => norm(s.row?.CODIGO ?? s.code) === key);
+
+  if (val <= 0) {
+    if (existing) {
+      state.scans = state.scans.filter((s) => s !== existing);
+      toast(`Se quitó ${row ? row.CODIGO : code} de la lista`, 'warn');
+    }
+  } else if (existing) {
+    existing.count = val;
+    existing.time = Date.now();
+    const stats = calculateItemStats(code, row, existing);
+    toast(`${row ? row.CODIGO : code} → FISICO fijado en ${val}`, 'ok');
+  } else {
+    const entry = { code: row ? row.CODIGO : code, row, found: !!row, time: Date.now(), count: val, source: 'manual' };
+    state.scans.unshift(entry);
+    toast(`${row ? row.CODIGO : code} → FISICO fijado en ${val}`, 'ok');
+  }
+
+  saveScans();
+  renderList();
+  bumpBadge();
 }
 
 /* =========================================================
@@ -250,6 +314,21 @@ function itemCardHTML(s, { dup = false, compact = false, deletable = false } = {
       </div>
     </div>`;
 
+  const qtyControls = `
+    <div class="qty-control-bar">
+      <div class="qty-control-head">
+        <span class="qty-label">Sumar / Ajustar Stock</span>
+      </div>
+      <div class="qty-btn-group">
+        <button class="btn-qty-sub" data-stock-sub="${esc(s.code)}" title="-1 unidad">-1</button>
+        <button class="btn-qty-add" data-stock-add="${esc(s.code)}" data-amount="1" title="+1 unidad">+1</button>
+        <button class="btn-qty-add accent" data-stock-add="${esc(s.code)}" data-amount="10" title="+10 unidades">+10</button>
+        <button class="btn-qty-add accent" data-stock-add="${esc(s.code)}" data-amount="100" title="+100 unidades">+100</button>
+        <button class="btn-qty-add hero" data-stock-add="${esc(s.code)}" data-amount="1000" title="+1000 unidades">+1000</button>
+        <button class="btn-qty-edit" data-stock-edit="${esc(s.code)}" title="Editar o ingresar cantidad exacta">✏️ Cantidad</button>
+      </div>
+    </div>`;
+
   const time = s.time ? new Date(s.time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
 
   return `<article class="${cls}">
@@ -265,6 +344,7 @@ function itemCardHTML(s, { dup = false, compact = false, deletable = false } = {
       </div>
     </div>
     ${summaryBar}
+    ${qtyControls}
     ${compact && time ? `<div class="item-meta">Última lectura: ${time}${s.found ? '' : ' · <span style="color:var(--warn)">agregado fuera de base</span>'}</div>` : ''}
   </article>`;
 }
@@ -278,6 +358,21 @@ function baseRowCardHTML(r, scanCount) {
 
   const diffCls = diferenVal === 0 ? 'ok' : diferenVal < 0 ? 'neg' : '';
   const isRead = scanCount > 0;
+
+  const qtyControls = `
+    <div class="qty-control-bar">
+      <div class="qty-control-head">
+        <span class="qty-label">Sumar / Cargar Stock</span>
+      </div>
+      <div class="qty-btn-group">
+        ${scanCount > 0 ? `<button class="btn-qty-sub" data-stock-sub="${esc(r.CODIGO)}" title="-1 unidad">-1</button>` : ''}
+        <button class="btn-qty-add" data-stock-add="${esc(r.CODIGO)}" data-amount="1">+1</button>
+        <button class="btn-qty-add accent" data-stock-add="${esc(r.CODIGO)}" data-amount="10">+10</button>
+        <button class="btn-qty-add accent" data-stock-add="${esc(r.CODIGO)}" data-amount="100">+100</button>
+        <button class="btn-qty-add hero" data-stock-add="${esc(r.CODIGO)}" data-amount="1000">+1000</button>
+        <button class="btn-qty-edit" data-stock-edit="${esc(r.CODIGO)}">✏️ Cantidad</button>
+      </div>
+    </div>`;
 
   return `<article class="item-card ${isRead ? '' : 'missing'}">
     <div class="item-head">
@@ -304,6 +399,7 @@ function baseRowCardHTML(r, scanCount) {
         <b>${diferenFmt}</b>
       </div>
     </div>
+    ${qtyControls}
   </article>`;
 }
 
@@ -588,10 +684,48 @@ function renderSuggestions() {
 function submitManual(code) {
   const value = (code ?? $('#input-code').value).trim();
   if (!value) { toast('Ingresá un código o nombre', 'warn'); return; }
-  showResult('#manual-result', registerCode(value, 'manual'));
+  const qtyInput = $('#input-manual-qty');
+  const qty = Math.max(1, parseInt(qtyInput?.value, 10) || 1);
+
+  showResult('#manual-result', registerCode(value, 'manual', qty));
   $('#input-code').value = '';
+  if (qtyInput) qtyInput.value = '1';
   $('#suggestions').innerHTML = '';
   $('#input-code').focus();
+}
+
+/* =========================================================
+   Modal de Edición / Carga Rápida de Stock
+   ========================================================= */
+let dlgTargetCode = '';
+let dlgMode = 'add'; // 'add' | 'set'
+
+function openQtyDialog(code) {
+  dlgTargetCode = code;
+  const r = lookup(code);
+  const scanMap = getScanCountMap();
+  const currentFisico = scanMap.get(r ? norm(r.CODIGO) : norm(code)) || 0;
+  const name = r ? r.ARTICULO : code;
+
+  $('#dlg-qty-title').textContent = `Stock de: ${code}`;
+  $('#dlg-qty-sub').innerHTML = `${esc(name)}<br><b>FISICO actual: ${currentFisico}</b>`;
+
+  dlgMode = 'add';
+  updateQtyDlgModeUI();
+  $('#input-qty-val').value = '1';
+
+  const dlg = $('#dlg-qty');
+  dlg.showModal();
+  setTimeout(() => $('#input-qty-val').select(), 50);
+}
+
+function updateQtyDlgModeUI() {
+  $('#btn-mode-add')?.classList.toggle('active', dlgMode === 'add');
+  $('#btn-mode-set')?.classList.toggle('active', dlgMode === 'set');
+  const confirmBtn = $('#btn-qty-confirm');
+  if (confirmBtn) {
+    confirmBtn.textContent = dlgMode === 'add' ? 'Sumar al Stock Físico (+)' : 'Establecer Cantidad Exacta (=)';
+  }
 }
 
 /* =========================================================
@@ -741,6 +875,29 @@ function bindEvents() {
     if (li) submitManual(li.dataset.code);
   });
 
+  // Botones de cantidad manual
+  $('#btn-manual-dec')?.addEventListener('click', () => {
+    const inp = $('#input-manual-qty');
+    if (!inp) return;
+    const v = Math.max(1, (parseInt(inp.value, 10) || 1) - 1);
+    inp.value = v;
+  });
+
+  $('#btn-manual-inc')?.addEventListener('click', () => {
+    const inp = $('#input-manual-qty');
+    if (!inp) return;
+    const v = (parseInt(inp.value, 10) || 1) + 1;
+    inp.value = v;
+  });
+
+  document.querySelectorAll('[data-manual-qty]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const q = parseInt(btn.dataset.manualQty, 10) || 1;
+      const inp = $('#input-manual-qty');
+      if (inp) inp.value = q;
+    });
+  });
+
   // Sub-tabs de la lista
   $('#tab-scanned-only')?.addEventListener('click', () => {
     state.listViewMode = 'scanned';
@@ -758,13 +915,78 @@ function bindEvents() {
 
   // Lista & Exportación
   $('#input-search')?.addEventListener('input', renderList);
-  $('#scan-list')?.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-del]');
-    if (!b) return;
-    state.scans = state.scans.filter((s) => s.code !== b.dataset.del);
-    saveScans();
-    renderList();
-    toast(`Eliminado ${b.dataset.del}`, 'warn');
+
+  // Delegación global para botones de stock (-1, +1, +10, +100, +1000, Editar)
+  const handleStockClick = (e) => {
+    const addBtn = e.target.closest('[data-stock-add]');
+    if (addBtn) {
+      const code = addBtn.dataset.stockAdd;
+      const amount = parseInt(addBtn.dataset.amount, 10) || 1;
+      addStock(code, amount);
+      return;
+    }
+
+    const subBtn = e.target.closest('[data-stock-sub]');
+    if (subBtn) {
+      const code = subBtn.dataset.stockSub;
+      addStock(code, -1);
+      return;
+    }
+
+    const editBtn = e.target.closest('[data-stock-edit]');
+    if (editBtn) {
+      const code = editBtn.dataset.stockEdit;
+      openQtyDialog(code);
+      return;
+    }
+
+    const delBtn = e.target.closest('[data-del]');
+    if (delBtn) {
+      state.scans = state.scans.filter((s) => s.code !== delBtn.dataset.del);
+      saveScans();
+      renderList();
+      toast(`Eliminado ${delBtn.dataset.del}`, 'warn');
+      return;
+    }
+  };
+
+  $('#scan-list')?.addEventListener('click', handleStockClick);
+  $('#last-scan')?.addEventListener('click', handleStockClick);
+  $('#manual-result')?.addEventListener('click', handleStockClick);
+  $('#photo-result')?.addEventListener('click', handleStockClick);
+
+  // Modal de cantidad (#dlg-qty)
+  const dlgQty = $('#dlg-qty');
+  dlgQty?.addEventListener('click', (e) => { if (e.target === dlgQty) dlgQty.close(); });
+  $('#btn-qty-cancel')?.addEventListener('click', () => dlgQty?.close());
+
+  $('#btn-mode-add')?.addEventListener('click', () => {
+    dlgMode = 'add';
+    updateQtyDlgModeUI();
+  });
+
+  $('#btn-mode-set')?.addEventListener('click', () => {
+    dlgMode = 'set';
+    updateQtyDlgModeUI();
+  });
+
+  document.querySelectorAll('[data-dlg-qty]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.dlgQty, 10) || 1;
+      const inp = $('#input-qty-val');
+      if (inp) inp.value = val;
+    });
+  });
+
+  $('#form-dlg-qty')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const val = parseInt($('#input-qty-val').value, 10) || 0;
+    if (dlgMode === 'add') {
+      addStock(dlgTargetCode, val);
+    } else {
+      setStock(dlgTargetCode, val);
+    }
+    dlgQty.close();
   });
 
   $('#btn-export')?.addEventListener('click', exportExcel);

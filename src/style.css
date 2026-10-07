@@ -248,6 +248,177 @@ button, input, label { font: inherit; color: inherit; }
 .suggestions li b { font-family: var(--mono); font-size: .85rem; color: var(--accent); }
 .suggestions li span { font-size: .8rem; color: var(--muted); }
 
+/* Controles de Cantidad / Stock */
+.manual-qty-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.manual-qty-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+.qty-input-wrap {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 42px;
+  flex-shrink: 0;
+}
+.btn-step {
+  width: 36px;
+  height: 100%;
+  border: 0;
+  background: rgba(255, 255, 255, .06);
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-step:hover { background: rgba(255, 255, 255, .15); }
+.btn-step:active { transform: scale(.95); }
+.qty-num-input {
+  width: 65px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+}
+
+.qty-quick-buttons {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+  min-width: 180px;
+}
+.btn-preset {
+  flex: 1;
+  min-width: 44px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-strong);
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-preset:hover {
+  border-color: var(--accent);
+  background: hsla(158, 84%, 48%, .15);
+  color: var(--accent);
+}
+.btn-preset:active { transform: scale(.94); }
+.btn-preset.hero {
+  border-color: hsla(158, 84%, 48%, .6);
+  background: linear-gradient(135deg, hsla(158, 84%, 48%, .25), hsla(188, 90%, 52%, .2));
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Barra de control de cantidad en tarjetas */
+.qty-control-bar {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, .08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qty-control-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.qty-label {
+  font-size: .66rem;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.qty-btn-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.btn-qty-sub, .btn-qty-add, .btn-qty-edit {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: .75rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-qty-sub:hover { border-color: var(--danger); color: var(--danger); background: hsla(352, 85%, 62%, .14); }
+.btn-qty-add:hover { border-color: var(--accent); color: var(--accent); background: hsla(158, 84%, 48%, .14); }
+.btn-qty-add.accent { border-color: hsla(158, 84%, 48%, .35); background: hsla(158, 84%, 48%, .1); color: var(--accent); }
+.btn-qty-add.hero { border-color: hsla(158, 84%, 48%, .6); background: linear-gradient(135deg, hsla(158, 84%, 48%, .25), hsla(188, 90%, 52%, .2)); color: #fff; font-weight: 800; }
+.btn-qty-edit { background: var(--card-strong); color: var(--muted); font-family: inherit; font-size: .72rem; margin-left: auto; }
+.btn-qty-edit:hover { color: #fff; border-color: var(--violet); }
+.btn-qty-sub:active, .btn-qty-add:active, .btn-qty-edit:active { transform: scale(.94); }
+
+/* Modal Qty */
+.qty-mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: rgba(0, 0, 0, .3);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.mode-tab {
+  flex: 1;
+  padding: 8px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+}
+.mode-tab.active {
+  background: var(--card-strong);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+}
+.qty-dlg-input-wrap input {
+  font-family: var(--mono);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--accent);
+  text-align: center;
+}
+
 /* Sub-tabs */
 .view-sub-toggle { display: flex; gap: 4px; margin: 10px 0 6px; padding: 3px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); }
 .sub-tab { flex: 1; border: 0; padding: 7px 8px; border-radius: 9px; background: none; font-size: .78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all .2s; }
