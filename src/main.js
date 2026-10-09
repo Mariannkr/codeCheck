@@ -10,8 +10,7 @@ const COLS = ['CODIGO', 'FAMILIA', 'ARTICULO', 'STOCK_DIS', 'STOCK_IND', 'STOCK_
 const LS_BASE = 'stockscan.base.v1';
 const LS_SCANS = 'stockscan.scans.v1';
 
-const FORMATS = [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E,
-  F.ITF, F.CODABAR, F.QR_CODE, F.DATA_MATRIX];
+const FORMATS = [F.EAN_13, F.EAN_8, F.CODE_128, F.UPC_A, F.UPC_E, F.CODE_39, F.QR_CODE];
 
 const state = {
   base: null,          // { fileName, loadedAt, rows: [] }
@@ -528,8 +527,12 @@ let lastAt = 0;
 let torchOn = false;
 
 function scannerConfig() {
-  return { formatsToSupport: FORMATS, verbose: false, useBarCodeDetectorIfSupported: true,
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
+  return {
+    formatsToSupport: FORMATS,
+    verbose: false,
+    useBarCodeDetectorIfSupported: true,
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+  };
 }
 
 async function startCamera() {
@@ -546,11 +549,13 @@ async function startCamera() {
     await scanner.start(
       { facingMode: 'environment' },
       {
-        fps: 15,
+        fps: 25,
         disableFlip: true,
+        qrbox: (w, h) => ({ width: Math.min(w * 0.85, 320), height: Math.min(h * 0.45, 180) }),
         videoConstraints: {
           facingMode: 'environment',
-          width: { ideal: 1920 }, height: { ideal: 1080 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
           advanced: [{ focusMode: 'continuous' }],
         },
       },
@@ -582,9 +587,10 @@ async function stopCamera() {
 
 function onLiveDecode(text) {
   const now = Date.now();
-  // Antirrebote: mismo código < 2.5s o cualquier código < 0.9s
-  if ((text === lastCode && now - lastAt < 2500) || now - lastAt < 900) return;
-  lastCode = text; lastAt = now;
+  // Antirrebote optimizado: mismo código < 1500ms o cualquier código diferente < 350ms
+  if ((text === lastCode && now - lastAt < 1500) || (text !== lastCode && now - lastAt < 350)) return;
+  lastCode = text;
+  lastAt = now;
   showResult('#last-scan', registerCode(text, 'vivo'));
 }
 
